@@ -652,21 +652,4 @@ for (df_name in names(df_lists)) {
 
 
 ```
-```{r}
-#merge everything
-
-
-library(purr)
-
-
-merged_df <- map_dfr(list(Goldman, Giacomo_Fassini, Holsgrove_West), ~ .x)
-
-merged_df <- list(Goldman, Giacomo_Fassini, Holsgrove_West) %>%
-  map(~ .x %>% mutate(across(everything(), as.character))) %>%
-  bind_rows()
-
-
-writexl::write_xlsx(merged_df, 'merged.xlsx' )
-
-```
 
