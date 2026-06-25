@@ -1,0 +1,672 @@
+---
+title: "Quality control Pipline for the DLW Dataset"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+## Readme for Non R users 
+I will explain to you how to deal with this pipeline to do the quality control step for the DLW datasets.
+
+The logic behind the pipeline can be divided into two steps: 1) load the data (Excel sheet), and 2) run the codes. Important: Before you load the file, make sure that the column names are EXACTLY the same as in the template because R is case-sensitive.
+
+## Readme
+
+This R Notebook provides a quality control (QC) pipeline for checking multiple Excel sheets from a merged DLW database submission file.
+
+The pipeline loads 14 Excel sheets from one merged Excel workbook, stores them in a list of data frames, and runs a series of automated checks to identify missing values, invalid codes, incorrect formats, implausible values, and columns that should be empty.
+
+The output is printed directly in the R console / R Notebook using clear status messages:
+
+- ✅ Passed / valid / empty / within range
+- ⚠️ Warning / missing values / not empty
+- ❌ Failed / invalid / column not found / out of range
+
+---
+
+## Purpose of the Pipeline
+
+The main purpose of this pipeline is to check whether DLW dataset sheets are ready for further review or submission.
+
+It checks:
+
+1. Whether all mandatory variables are filled in.
+2. Whether autocalculated columns are empty.
+3. Whether sex is coded correctly.
+4. Whether ethnicity is coded correctly.
+5. Whether measurement dates are plausible.
+6. Whether latitude, longitude, and elevation values are plausible.
+7. Whether Country ISO codes are valid.
+8. Whether age, height, and body weight are within plausible ranges.
+9. Whether ko, kd, No, and Nd values are within plausible DLW ranges.
+10. Whether reproductive status variables are coded correctly.
+
+---
+
+## Important Requirements
+
+This pipeline only works correctly if the column names in R match the column names in the Excel sheets *exactly*.
+
+Before running the pipeline, make sure that:
+
+1. All 14 Excel sheets use consistent column names.
+2. The variables defined in R, such as `req_var` and `empty_col`, match the Excel column names exactly.
+3. There are no extra spaces, spelling differences, or capitalization differences in the column names.
+
+For example, these would be treated as different column names by R:
+
+"Study ID"
+"StudyID"
+"study ID"
+"Study ID "
+
+--- 
+
+#Workflow Start form here(non-R users):
+This's the most important step for you because after that, you will only need to run the blocks and see the R results :).
+
+1- First you have to set the working directory, this's important to tell R where are your files
+2- Load the file
+Here you only need to copy the file path of the file, and laod it into the R environment (Top right).
+3- Add the file name to the df_lists.
+for example if you file name is Pfrimer, add the name inside the df_lists. 
+4- Run the block form the green right-arrow
+```{r}
+
+setwd("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data")
+
+
+# Step 1: load the files 
+
+#install.packages(c("tidyverse", "readxl"))
+
+library(readxl) 
+library(dplyr)
+
+
+Parthenon <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = 'Parthenon')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+Parthenon<- Parthenon[1:58,]
+
+
+Kupad_Shivakumar <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = 'Kupad_Shivakumar')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+Kupad_Shivakumar<- Kupad_Shivakumar[1:89,]
+
+Bangladesh <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = 'Bangladesh')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+Bangladesh<- Bangladesh[1:29,]
+
+
+Bandara <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '196_Bandara')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+Pfrimer <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '195_Pfrimer')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+
+Davy <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '194_Davy')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+Davy<- Davy[1:75,]
+
+
+Giacomo_Fassini <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '192_Giacomo_Fassini')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+Goldman <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '191_Goldman')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+
+
+weaver <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '190_Weaver(not_completed)')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+
+
+Desneves <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '193_Desneves')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+
+McGrosky  <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '189_McGrosky')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+
+Holsgrove_West<- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '188_Holsgrove-West')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+Holsgrove_West<- Holsgrove_West[1:25,]
+
+silver<- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '187_Silver')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+silver<- silver[1:118,]
+
+Pongcharoen <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = '186_Pongcharoen')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+Pongcharoen <- Pongcharoen[1:497,]
+
+
+coker_RH <- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet= 'TEE+FILE+COKER+RH')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+
+
+# Step 2: merge all the lists together 
+
+df_lists <- list(
+  Bangladesh = Bangladesh,
+  Bandara = Bandara,
+  Davy = Davy,
+  Desneves = Desneves,
+  Giacomo_Fassini = Giacomo_Fassini,
+  Goldman = Goldman,
+  Holsgrove_West = Holsgrove_West,
+  Kupad_Shivakumar = Kupad_Shivakumar,
+  McGrosky = McGrosky,
+  Parthenon = Parthenon,
+  Pfrimer = Pfrimer,
+  Pongcharoen = Pongcharoen,
+  silver = silver,
+  weaver = weaver,
+  coker_RH = coker_RH)
+
+
+```
+
+>You can ignore the warning message.
+
+> Clarification for the warning messages: Column AZ (column 52) was mostly empty at the top, so R guessed it was logical (TRUE/FALSE). Then at row 2716, it found the text "mass spec" — which R couldn't store as logical, so it likely converted it to NA.
+
+# Q1/ Are all the mandatory variable filled in ? 
+
+1- Here the logical steps are; 1- Create a variable that contains the names of the mandatory variables.
+2- Go through each dataset, and if the req_var are present in one of the datset, check whether all values are filled in or not. 
+
+> for Non-R USERS
+
+1- You don't need to modify anything here, just run the block from the green right-arrow and see the results. 
+```{r}
+
+#Question 1 ---- 
+
+# Q1/ Are all the mandatory variable filled in ? 
+
+req_var <- c(
+  "Study ID",
+  "Individual ID",
+  "Age",
+  "Sex",
+  "Dosing body weight",
+  "ko",
+  "kd",
+  "No",
+  "Nd",
+  "rCO2",
+  "rCO2 method",
+  "TEE")
+
+# First this assume that all the req_var is present in your df_lists
+
+
+
+
+  for (df_name in names(df_lists)) {                      #Loop over the 14 dataset
+    
+    current_df <- df_lists[[df_name]]                     
+    cat("\n📋 Checking:", df_name, "\n")
+    
+    for (var in req_var) {                               #2- loop over the req_var and check if the selected data has columnm in req_var
+      
+      if (var %in% colnames(current_df)) {                    #3- if req_var in one of the df 
+        
+        values <- current_df[[var]]           # ✅ keep all values including NAs
+        
+        if (all(!is.na(values))) {            # ✅ check if ALL values are filled
+          cat("  \u2705 Fully filled", var, "- Fully filled \n")
+        } else {
+          n_missing <- sum(is.na(values))     # ✅ count the NAs
+          cat("  ⚠️ ", var, "-", n_missing, "missing values \n")
+        }
+        
+      }  else {
+        cat("  ❌", var, "- Column not found \n")
+      }
+    }
+  }
+
+
+
+
+```
+
+> Note: Pongcharoen Study ID is completely missing.
+
+
+> Heatmap to see the % of the completeness
+
+```{r}
+library(tidyverse)
+
+# Build a results dataframe from your loop
+results <- map_dfr(names(df_lists), function(df_name) {
+  current_df <- df_lists[[df_name]]
+  map_dfr(req_var, function(var) {
+    if (!var %in% colnames(current_df)) {                    #If the variable is missing, put absent in status
+      tibble(dataset = df_name, variable = var, status = "absent", pct_complete = NA)
+    } else {
+      values <- current_df[[var]]                      #If not missing take the values
+      n_total   <- length(values)                      # count the values 
+      n_missing <- sum(is.na(values))                   #Count the missing values 
+      tibble(                                            #create results dataframe 
+        dataset     = df_name,
+        variable    = var,
+        status      = ifelse(n_missing == 0, "ok", "warn"),            #If the missing zero put ok, else warn 
+        pct_complete = round((1 - n_missing / n_total) * 100)           #count the %
+      )
+    }
+  })
+})
+
+# Plot the heatmap
+results %>%                              #Take the df results and make label column to 
+  mutate(label = case_when(
+    status == "absent" ~ "N/A",
+    pct_complete == 100 ~ "100%",
+    TRUE ~ paste0(pct_complete, "%")     #for all cases write the value pct_com and put %
+  )) %>%
+  ggplot(aes(x = variable, y = dataset, fill = pct_complete)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  geom_text(aes(label = label), size = 3) +
+  scale_fill_gradient2(low = "#E24B4A", mid = "#FAC775", high = "#1D9E75",
+                       midpoint = 50, na.value = "#D3D1C7", limits = c(0, 100),
+                       name = "% complete") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = NULL, y = NULL, title = "QC completeness across datasets")
+```
+
+
+
+
+# Q2/ Are all autocalculated columns empty? 
+
+ - Here, the logical steps are:
+1- Create a variable that contains the column names that must be empty.
+2- Go through each dataset.
+3- If the columns in empty_col match the column names in the dataset, check whether they are empty or not.
+3- If all the columns are empty in the dataset, print the dataset name and state that they are empty. If not, extract the values and show their location in the dataset.
+
+
+```{r}
+# Q2/ Are all autocalculated columns empty? 
+
+empty_col<- c("Database measurement ID","Database individual ID","BMI","Average weight",
+              "Weight change","ko/kd","Nd/No","pred DSR","autocompleted CO2 production","TBW","Autocompleted TEE Speakman et al 2021","Water turnover","Hydration",
+              "FFM (kg)","FFM(0.732)","FM (kg)","Adiposity","Analysis lab anon")
+
+
+for( df_name in names(df_lists)){
+  df<- df_lists[[df_name]]
+  matched_cols<- intersect(colnames(df),empty_col) #find the empty_cols in the datasets
+  
+  if(length(matched_cols) == 0) next             #skip if the matched _cols == zero 
+  cat('\n',df_name,'\n')
+   cat('---------------------','\n')
+  for(col in matched_cols){
+    values<-df[[col]]                           #extract the column values
+    
+    if(all(is.na(values) | values == "")) {
+      
+      cat(paste('\u2705', col, 'is empty \n'))
+    } else {
+      non_empty_rows<- which(!is.na(values) & values != "")
+      non_empty_vals<- values[non_empty_rows]
+      cat(paste('\u274C',col,'is NOT empty\n'))
+      for( i in seq_along(non_empty_rows)){
+        cat(paste('  Row',non_empty_rows[i],'>>',non_empty_vals[i], '\n'))
+      }
+      
+    }
+  }
+}  
+  
+
+
+```
+
+# Q3/ Is sex coded correctly ? 
+- Here, the logical steps are:
+1- Create a variable that contains the accepted sex values: F, M, and NA.
+2- Go to the Sex column in each dataset.
+3- Check whether all values match one of the accepted sex values.
+
+```{r}
+# Q3/ Is sex coded correctly ? 
+
+
+sex_var<- c('F','M','NA') 
+
+
+
+for (df_name in names(df_lists)) {
+  
+  df <- df_lists[[df_name]]
+  
+  # Check if Sex column exists
+  if ("Sex" %in% colnames(df)) {
+    
+    values <- df$Sex
+    
+    # Find invalid values
+    invalid_values <- values[
+      !is.na(values) &
+        !(values %in% sex_var)
+    ]
+    
+    if (length(invalid_values) > 0) {
+      
+      print(
+        paste(
+          df_name,
+          "contains invalid Sex values:"
+        )
+      )
+      
+      print(unique(invalid_values))
+      
+    } else {
+      
+      print(
+        paste(df_name, '\u2705',"- Sex column is valid")
+      )
+    }
+    
+  } else {
+    
+    print(
+      paste(df_name,'\u26A0' ,"- Sex column NOT FOUND")
+    )
+  }
+}
+
+
+```
+
+
+
+# Q4/ Is ethnicity coded correctly?
+- Here, the logical steps are:
+1- Create a variable that contains the accepted ethnicity codes.
+2- Go to the Ethnicity column in each dataset.
+3- Check whether all values match one of the accepted ethnicity codes.
+4- If there are invalid values, print the dataset name and show the invalid values.
+
+```{r}
+
+# Q4/ Is ethnicity coded correctly?
+
+ethnicity<-  c('A', 'AA', 'C', 'AS', 'H', 'O', 'NA') 
+  
+
+#This for loop would take all the column values and compare it to the ethnicity, if something is not valid, it will print invalid values 
+for (df_name in names(df_lists)) {
+  df <- df_lists[[df_name]]
+  
+  if (!"Ethnicity" %in% colnames(df)) {
+    cat(df_name, "- Ethnicity column NOT FOUND\n")
+    next
+  }
+  
+  invalid <- unique(df$Ethnicity[!is.na(df$Ethnicity) & !df$Ethnicity %in% ethnicity])   #Take invalid values
+  
+  if (length(invalid) == 0) {
+    cat(df_name, "- ✅ All ethnicity values are valid\n")
+  } else {
+    cat(df_name, "- ❌ Invalid values:", paste(invalid, collapse = ", "), "\n")
+  }
+}
+
+
+
+```
+
+
+
+> The following function is desgined to take the varaible name, and its range to check each value in that varibale within the requried range or not. I used this function in Q5, Q6, Q8, Q9
+
+
+# Q5/ Are measurements date plausible? 
+- Here, the logical steps are:
+1- Create a function that take input (datasets,colname(variables), ranges, label).
+2- define each input in the function.
+3- Add your input to the function and see the output.
+
+```{r}
+
+# Q5/ Are measurements date plausible? 
+
+check_range <- function(df_lists, col_name, min_val, max_val, label = col_name) {
+  cat('\n', label, '\n--------------------\n')    # 1)print the label
+  for (df_name in names(df_lists)) {               # 2) loop over the df_lists
+    df <- df_lists[[df_name]]                       # 3) take the dataset 
+    if (!col_name %in% names(df)) next                # 4) If col_name not in the colnames of the data, skip 
+    values <- suppressWarnings(as.numeric(df[[col_name]]))   # 5) Take the column values and put it into values variable
+    if (all(is.na(values))) {                                  
+      cat('\u26A0',df_name, ':', label, 'column is empty\n')
+    } else if (all(values >= min_val & values <= max_val, na.rm = TRUE)) {     # 6) Here check the values range
+      cat('\u2705',df_name, ': Within the', label, 'range\n')
+    } else {
+      invalid <- values[!is.na(values) & (values < min_val | values > max_val)]                    #7) if not within the range take the invalid values
+      cat('\u274C',df_name, ': Out of range →', paste(invalid, collapse = ", "), '\n')             #8) Tell me where are these values
+    }
+  }
+}
+
+check_range(df_lists, 'Day',       1,    31)
+check_range(df_lists, 'Year',     1900,   2025)
+check_range(df_lists, 'Month',     1,  12)
+
+```
+
+
+> Explaination: R printed NA as values because in the main dataset, NA is written as text rather than being an empty cell.
+
+# Q6/ Are latitude, longitude and elevation plausible?? 
+
+```{r}
+#Q6/ Are latitude, longitude and elevation plausible?? 
+check_range <- function(df_lists, col_name, min_val, max_val, label = col_name) {
+  cat('\n', label, '\n--------------------\n')    # 1)print the label
+  for (df_name in names(df_lists)) {               # 2) loop over the df_lists
+    df <- df_lists[[df_name]]                       # 3) take the dataset 
+    if (!col_name %in% names(df)) next                # 4) If col_name not in the colnames of the data, skip 
+    values <- suppressWarnings(as.numeric(df[[col_name]]))   # 5) Take the column values and put it into values 
+    if (all(is.na(values))) {                                  
+      cat('\u26A0',df_name, ':', label, 'column is empty\n')
+    } else if (all(values >= min_val & values <= max_val, na.rm = TRUE)) {     # 6) Here check the values range
+      cat('\u2705',df_name, ': Within the', label, 'range\n')
+    } else {
+      invalid <- values[!is.na(values) & (values < min_val | values > max_val)]                    #7) if not within the range take the invalid values
+      cat('\u274C',df_name, ': Out of range →', paste(invalid, collapse = ", "), '\n')             #8) Tell me where are these values
+    }
+  }
+}
+
+check_range(df_lists, 'Latitude',       -90,    90)
+check_range(df_lists, 'Longitude',     -180,   180)
+check_range(df_lists, 'Elevation',     -430,  8850)
+
+
+
+```
+
+# Q7/ Is Country ISO valid?
+
+- Here, the logical steps are:
+1- Create a variable that contains the ISO code.
+2- Go to the Country ISO in each dataset. 
+3- If onE of the ISO code is present in the dataset.
+4- Print Valid ISO country.
+5- If not, print Invalid ISO country.
+
+```{r}
+#Q7/Is Country ISO valid?
+
+
+ISO<- read_excel("C:/Users/MOHAMEDAH/OneDrive - IAEA/Ahmed/Nutrition_health/DLW_Alexia/draft_data/template.xlsx", sheet = 'Country ISO')%>%
+  filter(if_any(everything(), ~ !is.na(.)))
+  
+ISO_country<- ISO$`Alpha-3 code`
+
+
+for (df_name in names(df_lists)) {
+  
+  df     <- df_lists[[df_name]]
+  values <- df$`Country ISO`
+  
+  if (any(values %in% ISO_country, na.rm = TRUE)) {
+    cat("\u2705", df_name, ": Valid ISO country\n")
+  } else {
+    cat("\u274C", df_name, ": Invalid ISO country\n")
+  }
+}
+```
+
+# Q8/Are age, weight and height within plausible range?
+
+
+```{r}
+
+
+# Q8/Are age, weight and height within plausible range?
+check_range <- function(df_lists, col_name, min_val, max_val, label = col_name) {
+  cat('\n', label, '\n--------------------\n')    # 1)print the label
+  for (df_name in names(df_lists)) {               # 2) loop over the df_lists
+    df <- df_lists[[df_name]]                       # 3) take the dataset 
+    if (!col_name %in% names(df)) next                # 4) If col_name not in the colnames of the data, skip 
+    values <- suppressWarnings(as.numeric(df[[col_name]]))   # 5) Take the column values and put it into values 
+    if (all(is.na(values))) {                                  
+      cat('\u26A0',df_name, ':', label, 'column is empty\n')
+    } else if (all(values >= min_val & values <= max_val, na.rm = TRUE)) {     # 6) Here check the values range
+      cat('\u2705',df_name, ': Within the', label, 'range\n')
+    } else {
+      invalid <- values[!is.na(values) & (values < min_val | values > max_val)]                    #7) if not within the range take the invalid values
+      cat('\u274C',df_name, ': Out of range →', paste(invalid, collapse = ", "), '\n')             #8) Tell me where are these values
+    }
+  }
+}
+
+check_range(df_lists, 'Age',       0,    130)
+check_range(df_lists, 'Dosing body weight',     0,   400)
+check_range(df_lists, 'Height',     30,  250)
+
+```
+
+
+
+# Q9/ Are ko, kd, No and Nd within plausible ranges?
+
+```{r}
+# Q9 Are ko, kd, No and Nd within plausible ranges?
+
+
+# Q8/Are age, weight and height within plausible range?
+check_range <- function(df_lists, col_name, min_val, max_val, label = col_name) {
+  cat('\n', label, '\n--------------------\n')    # 1)print the label
+  for (df_name in names(df_lists)) {               # 2) loop over the df_lists
+    df <- df_lists[[df_name]]                       # 3) take the dataset 
+    if (!col_name %in% names(df)) next                # 4) If col_name not in the colnames of the data, skip 
+    values <- suppressWarnings(as.numeric(df[[col_name]]))   # 5) Take the column values and put it into values 
+    if (all(is.na(values))) {                                  
+      cat('\u26A0',df_name, ':', label, 'column is empty\n')
+    } else if (all(values >= min_val & values <= max_val, na.rm = TRUE)) {     # 6) Here check the values range
+      cat('\u2705',df_name, ': Within the', label, 'range\n')
+    } else {
+      invalid <- values[!is.na(values) & (values < min_val | values > max_val)]                    #7) if not within the range take the invalid values
+      cat('\u274C',df_name, ': Out of range →', paste(invalid, collapse = ", "), '\n')             #8) Tell me where are these values
+    }
+  }
+}
+
+check_range(df_lists, 'ko',       0.01,    2)
+check_range(df_lists, 'kd',     0.01,   2)
+check_range(df_lists, 'No',     50,  6000)
+check_range(df_lists, 'Nd',     50,  6000)
+
+
+```
+> Note:In Bandara and Pongcharoen datasets, NOT ALL the values are within the required range)
+
+
+
+# Q10/ Is reproductive status coded correctly? 
+
+```{r}
+#Q10/ Is reproductive status coded correctly? 
+
+
+cat('rep status female','\n___________________________\n')
+
+female_status <- c("PP", "RANR", "P", "P p1", "P p2", "P p3", "L", "PM", "NA")
+for (df_name in names(df_lists)) {
+  df <- df_lists[[df_name]]
+  
+  if (!"rep status female" %in% colnames(df)) {
+    cat(df_name, "- rep status female column NOT FOUND\n")
+    next
+  }
+  
+  invalid <- unique(df$`rep status female`[!is.na(df$`rep status female`) & !df$`rep status female` %in% female_status])   #Take invalid values
+  
+  if (length(invalid) == 0) {
+    cat(df_name, "- ✅ All rep status female values are valid\n")
+  } else {
+    cat(df_name, "- ❌ Invalid values:", paste(invalid, collapse = ", "), "\n")
+  }
+}
+
+
+
+male_status<-c("PP", "R", "NA")
+
+cat('rep status male','\n___________________________\n')
+
+for (df_name in names(df_lists)) {
+  df <- df_lists[[df_name]]
+  
+  if (!"rep status male" %in% colnames(df)) {
+    cat(df_name, "- rep status male column NOT FOUND\n")
+    next
+  }
+  
+  invalid <- unique(df$`rep status male`[!is.na(df$`rep status male`) & !df$`rep status male` %in% male_status])   #Take invalid values
+  
+  if (length(invalid) == 0) {
+    cat(df_name, "- ✅ All rep status male values are valid\n")
+  } else {
+    cat(df_name, "- ❌ Invalid values:", paste(invalid, collapse = ", "), "\n")
+  }
+}
+
+
+```
+```{r}
+#merge everything
+
+
+library(purr)
+
+
+merged_df <- map_dfr(list(Goldman, Giacomo_Fassini, Holsgrove_West), ~ .x)
+
+merged_df <- list(Goldman, Giacomo_Fassini, Holsgrove_West) %>%
+  map(~ .x %>% mutate(across(everything(), as.character))) %>%
+  bind_rows()
+
+
+writexl::write_xlsx(merged_df, 'merged.xlsx' )
+
+```
+
